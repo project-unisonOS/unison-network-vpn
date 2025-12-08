@@ -16,6 +16,7 @@ VPN_HEALTH_PORT = int(os.getenv("VPN_HEALTH_PORT", "8084"))
 VPN_IP_ECHO_URL = os.getenv("VPN_IP_ECHO_URL")
 HANDSHAKE_TTL = int(os.getenv("VPN_READY_HANDSHAKE_TTL", "180"))
 REQUIRE_VPN = os.getenv("WIREGUARD_REQUIRED", "true").lower() == "true"
+REQUIRE_EXIT_IP = os.getenv("VPN_READY_REQUIRE_EXIT_IP", "false").lower() == "true"
 
 app = FastAPI(title="unison-network-vpn", version="0.1.0")
 
@@ -24,8 +25,12 @@ class VpnStatus(BaseModel):
     interface: str
     interface_up: bool
     latest_handshake: Optional[int] = None
+    handshake_age: Optional[int] = None
     exit_ip: Optional[str] = None
     config_path: Optional[str] = None
+    require_vpn: bool = True
+    require_exit_ip: bool = False
+    iptables_enforced: bool = True
     ready: bool = False
 
 
@@ -79,13 +84,20 @@ async def current_status(include_ip: bool = False) -> VpnStatus:
     interface_up = _interface_up()
     exit_ip = await _egress_ip() if include_ip else None
     config_path = os.getenv("WIREGUARD_CONFIG_PATH", f"/etc/wireguard/{INTERFACE}.conf")
-    ready = (interface_up and latest is not None and (int(time.time()) - latest) < HANDSHAKE_TTL) or not REQUIRE_VPN
+    handshake_age = int(time.time()) - latest if latest else None
+    ready_core = interface_up and latest is not None and (int(time.time()) - latest) < HANDSHAKE_TTL
+    ready_exit_ip = True if not REQUIRE_EXIT_IP else exit_ip is not None
+    ready = (ready_core and ready_exit_ip) or not REQUIRE_VPN
     return VpnStatus(
         interface=INTERFACE,
         interface_up=interface_up,
         latest_handshake=latest,
+        handshake_age=handshake_age,
         exit_ip=exit_ip,
         config_path=config_path if os.path.exists(config_path) else None,
+        require_vpn=REQUIRE_VPN,
+        require_exit_ip=REQUIRE_EXIT_IP,
+        iptables_enforced=True,
         ready=ready,
     )
 
@@ -97,9 +109,18 @@ async def health() -> Dict[str, str]:
 
 @app.get("/readyz")
 async def ready() -> JSONResponse:
-    status = await current_status(include_ip=False)
-    content = {"ready": status.ready, "interface": status.interface, "interface_up": status.interface_up}
-    return JSONResponse(status_code=200, content=content)
+    status = await current_status(include_ip=REQUIRE_EXIT_IP)
+    content = {
+        "ready": status.ready,
+        "interface": status.interface,
+        "interface_up": status.interface_up,
+        "latest_handshake": status.latest_handshake,
+        "handshake_age": status.handshake_age,
+        "require_exit_ip": status.require_exit_ip,
+        "exit_ip": status.exit_ip,
+    }
+    code = 200 if status.ready else 503
+    return JSONResponse(status_code=code, content=content)
 
 
 @app.get("/status", response_model=VpnStatus)

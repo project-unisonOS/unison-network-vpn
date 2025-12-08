@@ -24,6 +24,8 @@ python -m src.main
 - `VPN_HEALTH_PORT` (default `8084`)
 - `VPN_IP_ECHO_URL` (optional IP echo endpoint, e.g. `https://api.ipify.org`)
 - `VPN_READY_HANDSHAKE_TTL` (seconds, default `180`)
+- `VPN_READY_REQUIRE_EXIT_IP` (default `false`) — if true, ready only when exit IP is discovered.
+- `ENFORCE_IPV6` (default `true`) — apply fail-closed ip6tables rules alongside IPv4.
 
 ## Docker
 ```bash

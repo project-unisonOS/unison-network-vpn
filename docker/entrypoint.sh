@@ -5,6 +5,7 @@ INTERFACE="${WIREGUARD_INTERFACE:-wg0}"
 CONFIG_PATH="${WIREGUARD_CONFIG_PATH:-/etc/wireguard/${INTERFACE}.conf}"
 CONFIG_B64="${WIREGUARD_CONFIG_B64:-}"
 WIREGUARD_REQUIRED="${WIREGUARD_REQUIRED:-true}"
+ENFORCE_IPV6="${ENFORCE_IPV6:-true}"
 
 mkdir -p /etc/wireguard
 if [[ -n "$CONFIG_B64" ]]; then
@@ -33,6 +34,12 @@ if [[ "${WIREGUARD_REQUIRED,,}" == "true" && -f "$CONFIG_PATH" ]]; then
     fi
   fi
   iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  if [[ "${ENFORCE_IPV6,,}" == "true" ]]; then
+    ip6tables -P OUTPUT DROP || true
+    ip6tables -A OUTPUT -o lo -j ACCEPT || true
+    ip6tables -A OUTPUT -o "$INTERFACE" -j ACCEPT || true
+    ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || true
+  fi
 fi
 
 exec python -m src.main
