@@ -6,12 +6,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wireguard-tools iproute2 iptables python3 python3-pip ca-certificates iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./requirements.txt
-COPY constraints.txt ./constraints.txt
+COPY unison-network-vpn/requirements.txt ./requirements.txt
+COPY unison-network-vpn/constraints.txt ./constraints.txt
 RUN pip install --no-cache-dir -c ./constraints.txt -r requirements.txt
 
-COPY src ./src
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY unison-network-vpn/src ./src
+COPY unison-network-vpn/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV PYTHONPATH=/app/src \
