@@ -4,7 +4,7 @@ ARG REPO_PATH="unison-network-vpn"
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wireguard-tools iproute2 iptables ca-certificates iputils-ping \
+    wireguard-tools iproute2 iptables ca-certificates iputils-ping curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ${REPO_PATH}/requirements.txt ./requirements.txt
