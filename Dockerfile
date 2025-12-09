@@ -16,7 +16,8 @@ RUN chmod +x /entrypoint.sh
 
 ENV PYTHONPATH=/app/src \
     VPN_HEALTH_PORT=8084 \
-    WIREGUARD_INTERFACE=wg0
+    WIREGUARD_INTERFACE=wg0 \
+    PIP_BREAK_SYSTEM_PACKAGES=1
 
 EXPOSE 8084
 CMD ["/entrypoint.sh"]
